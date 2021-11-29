@@ -1,0 +1,46 @@
+#!/bin/bash
+
+TIMEOUT=""
+
+while getopts ":t:" o; do
+    case "${o}" in
+        t)
+            TIMEOUT=${OPTARG}
+            ;;
+        :)
+            echo "Error: -${OPTARG} requires the TIMEOUT as argument."
+			exit -1
+            ;;
+        *)
+			echo -e "Usage: untilfail [ -t TIMEOUT ] CMD\n\nTIMEOUT is a floating point number with an optional suffix: 's' for seconds (the default), 'm' for minutes, 'h' for hours or 'd' for days."
+			exit
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ -z "$TIMEOUT" ]]; then
+	TIMEOUT="0"
+fi
+
+CMD="$@"
+
+if [[ -z "$CMD" ]]; then
+	echo "Error: CMD must be present."
+	exit -1
+fi
+
+export NO_UNIT_TEST_CACHE=1
+
+let count=0
+summary()
+{
+	echo -e "\n\e[30m\e[102m executed $count times \e[0m\n"
+}
+trap summary EXIT
+
+while : ; do
+	let count++
+	echo -e "\n\e[30m\e[102m run $count \e[0m\n"
+	timeout --preserve-status --foreground "$TIMEOUT" "$@" || break
+done
